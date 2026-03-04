@@ -1,141 +1,75 @@
-# Wednesday AI Assistant
+# Wednesday — Personal AI Desktop Assistant (Windows)
 
-A premium, futuristic Windows desktop AI assistant powered by GPT-4o.
-
----
+A voice-first desktop AI assistant for Windows, powered by OpenAI.
 
 ## Features
 
-- **Wake Word** — "Hey Wednesday" / "Wake up Wednesday" — always listening in low-power mode
-- **Voice I/O** — OpenAI Whisper (STT) + OpenAI TTS Nova voice
-- **GPT-4o Brain** — Intent detection via tool-calling, not keyword matching
-- **Tool System** — Launch apps, system control, send email — fully extensible
-- **Futuristic GUI** — Animated orb, waveform visualiser, glassmorphism panels, 60fps
+- Wake word detection ("Hey Wednesday")
+- Speech-to-text via SpeechRecognition
+- Text-to-speech via pyttsx3
+- AI responses via OpenAI (gpt-4o-mini)
+- Floating PySide6 GUI with animated state orb
+- Skill system: open apps, websites, system control, files, clipboard, email, reminders
+- Short-term (RAM) and long-term (JSON) memory
+- Confirmation prompts for dangerous actions
 
----
+## Setup
 
-## Quick Start
+1. Install dependencies:
 
-```bash
-# 1. Clone
-git clone https://github.com/your-repo/wednesday
-cd wednesday
-
-# 2. Install dependencies
+```
 pip install -r requirements.txt
-
-# 3. Configure
-cp .env.example .env
-# Fill in OPENAI_API_KEY and optional SMTP credentials
-
-# 4. Run
-python main.py
 ```
 
----
+2. Configure your OpenAI API key in `.env`:
+
+```
+OPENAI_API_KEY=your_api_key_here
+```
+
+3. Run:
+
+```
+python main.py
+```
 
 ## Project Structure
 
 ```
 wednesday/
-├── main.py               Entry point
-├── config.py             Central configuration (env-driven)
-├── core/
-│   ├── assistant.py      State machine + orchestration
-│   ├── events.py         Thread-safe event bus
-│   ├── orchestrator.py   Middleware pipeline
-│   └── context_manager.py  Context window management
-├── brain/
-│   ├── llm_client.py     OpenAI Chat + tool-calling
-│   ├── tool_registry.py  Central tool registry
-│   ├── intent_parser.py  Supplemental NLU helpers
-│   └── prompt_templates.py  System prompt
-├── voice/
-│   ├── wake_word.py      Always-listening detector
-│   ├── speech_to_text.py Whisper API transcription
-│   └── text_to_speech.py OpenAI TTS + pygame playback
-├── tools/
-│   ├── base_tool.py      Abstract tool interface
-│   ├── app_launcher.py   Open Windows applications
-│   ├── system_tools.py   Time, shutdown, volume, lock
-│   ├── email_tool.py     SMTP email sender
-│   └── messaging_tool.py SMS stub (Twilio-ready)
-├── gui/
-│   ├── main_window.py    Frameless PyQt6 window
-│   ├── widgets.py        OrbWidget, WaveformWidget, etc.
-│   └── theme.py          Design tokens
-├── memory/
-│   ├── short_term.py     Rolling conversation buffer
-│   ├── long_term.py      JSON-backed persistent facts
-│   └── storage.py        Low-level JSON helpers
-├── services/
-│   ├── logger.py         Rotating file + console logger
-│   ├── settings_manager.py  QSettings persistence
-│   └── task_queue.py     ThreadPoolExecutor wrapper
-├── data/                 Runtime data (logs, memory)
-├── assets/               Icons, sounds, images
-└── build/
-    ├── build_exe.spec    PyInstaller spec
-    └── installer_config.iss  Inno Setup installer
+├── main.py              # Entry point
+├── config.py            # Settings loaded from .env
+├── state.py             # Thread-safe assistant state
+├── wake_word/           # Wake word detection
+├── audio/               # Speech-to-text and text-to-speech
+├── brain/               # OpenAI integration and memory
+├── router/              # Command routing
+├── skills/              # Skill modules
+├── gui/                 # PySide6 floating window
+├── security/            # Confirmation system
+├── updater/             # Self-update placeholder
+├── plugins/             # Plugin directory
+├── data/                # Runtime data (memory, logs)
+└── requirements.txt     # Dependencies
 ```
 
----
+## Voice Commands
 
-## Building the .exe
+| Command | Action |
+|---|---|
+| "Hey Wednesday" | Wake the assistant |
+| "Open Chrome" | Launch an application |
+| "Search cats on Google" | Google search |
+| "Open YouTube" | Open website |
+| "Shutdown" | Shut down computer (with confirmation) |
+| "My name is Vishesh" | Store personal fact |
+| "What is my name?" | Recall stored fact |
+| "Remind me to buy milk" | Set a reminder |
+| "Go to sleep" | Put assistant to sleep |
 
-```bash
-# From project root
-pyinstaller build/build_exe.spec
+## Requirements
 
-# Output: dist/Wednesday.exe
-```
-
-Then run `build/installer_config.iss` through Inno Setup to produce a polished installer.
-
----
-
-## Adding New Tools
-
-```python
-# tools/my_tool.py
-from tools.base_tool import BaseTool
-
-class MyTool(BaseTool):
-    @property
-    def name(self): return "my_tool"
-
-    @property
-    def description(self): return "Does something useful."
-
-    def parameters_schema(self):
-        return {
-            "type": "object",
-            "properties": { "param": {"type": "string"} },
-            "required": ["param"],
-        }
-
-    def execute(self, param: str, **_) -> str:
-        return f"Did the thing with {param}"
-```
-
-Then register in `core/assistant.py`:
-```python
-from tools.my_tool import MyTool
-self._registry.register(MyTool())
-```
-
----
-
-## Wake Phrases
-
-| Phrase | Action |
-|--------|--------|
-| "Hey Wednesday" | Wake |
-| "Wake up Wednesday" | Wake |
-| "Go to sleep" | Sleep |
-| "That's all" | Sleep |
-
----
-
-## License
-MIT
+- Windows 10/11
+- Python 3.11+
+- Microphone
+- OpenAI API key

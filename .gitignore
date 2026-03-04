@@ -1,3 +1,31 @@
-venv/
+# Virtual environment
 .venv/
+venv/
 env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs and data
+data/logs/
+data/memory/
+
+# PyInstaller
+*.spec
