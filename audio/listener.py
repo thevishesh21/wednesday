@@ -13,6 +13,7 @@ class Listener:
         self.recognizer.energy_threshold = config.ENERGY_THRESHOLD
         self.recognizer.dynamic_energy_threshold = True
         self.microphone = None
+        self.has_mic = False
         self._init_microphone()
 
     def _init_microphone(self):
@@ -21,13 +22,15 @@ class Listener:
             # Adjust for ambient noise on startup
             with self.microphone as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
-        except (OSError, AttributeError) as e:
-            print(f"[Listener] Microphone not available: {e}")
+            self.has_mic = True
+        except Exception:
+            print("[Listener] No microphone detected. Switching to text input mode.")
             self.microphone = None
+            self.has_mic = False
 
     def listen(self) -> str | None:
         """Listen for speech and return recognized text, or None on failure."""
-        if self.microphone is None:
+        if not self.has_mic or self.microphone is None:
             return None
 
         try:
@@ -51,4 +54,4 @@ class Listener:
             return None
 
     def is_available(self) -> bool:
-        return self.microphone is not None
+        return self.has_mic

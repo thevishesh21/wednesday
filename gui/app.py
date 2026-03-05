@@ -1,12 +1,12 @@
 """
 Wednesday - Main GUI Application
-PySide6-based floating assistant window.
+PySide6-based floating assistant window with chat interface.
 """
 
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QSizePolicy,
+    QLabel, QPushButton, QSizePolicy, QTextEdit, QLineEdit,
 )
 from PySide6.QtCore import Qt, Signal, QObject, Slot, QPoint
 from PySide6.QtGui import QFont
@@ -22,10 +22,11 @@ class GUISignals(QObject):
     response_update = Signal(str)     # assistant response text
     status_update = Signal(str)       # status bar text
     mic_clicked = Signal()            # MIC button pressed
+    text_submitted = Signal(str)      # text typed in GUI
 
 
 class WednesdayWindow(QMainWindow):
-    """Main assistant window."""
+    """Main assistant window with chat interface."""
 
     def __init__(self):
         super().__init__()
@@ -37,7 +38,7 @@ class WednesdayWindow(QMainWindow):
 
     def _setup_window(self):
         self.setWindowTitle("Wednesday")
-        self.setFixedSize(360, 500)
+        self.setFixedSize(420, 620)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -45,7 +46,7 @@ class WednesdayWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setStyleSheet(MAIN_STYLESHEET)
 
-        # Center on screen
+        # Position at bottom-right of screen
         screen = QApplication.primaryScreen()
         if screen:
             geo = screen.availableGeometry()
@@ -79,50 +80,53 @@ class WednesdayWindow(QMainWindow):
 
         layout.addLayout(title_bar)
 
-        # --- Orb animation ---
-        orb_container = QHBoxLayout()
-        orb_container.addStretch()
-        self.orb = OrbWidget()
-        orb_container.addWidget(self.orb)
-        orb_container.addStretch()
-        layout.addLayout(orb_container)
+        # --- Orb + Status row ---
+        orb_row = QHBoxLayout()
+        orb_row.addStretch()
 
-        # --- Status label ---
+        self.orb = OrbWidget()
+        self.orb.setFixedSize(80, 80)
+        orb_row.addWidget(self.orb)
+
         self.status_label = QLabel("Sleeping")
         self.status_label.setObjectName("statusLabel")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label)
+        orb_row.addWidget(self.status_label)
 
-        # --- Transcript (what user said) ---
-        self.transcript_label = QLabel("")
-        self.transcript_label.setObjectName("transcriptLabel")
-        self.transcript_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.transcript_label.setWordWrap(True)
-        self.transcript_label.setMaximumHeight(60)
-        layout.addWidget(self.transcript_label)
+        orb_row.addStretch()
+        layout.addLayout(orb_row)
 
-        # --- Response (what assistant said) ---
-        self.response_label = QLabel("")
-        self.response_label.setObjectName("responseLabel")
-        self.response_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.response_label.setWordWrap(True)
-        self.response_label.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        # --- Chat history ---
+        self.chat_history = QTextEdit()
+        self.chat_history.setObjectName("chatHistory")
+        self.chat_history.setReadOnly(True)
+        self.chat_history.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        layout.addWidget(self.response_label)
+        layout.addWidget(self.chat_history)
 
-        # --- Mic button ---
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
+        # --- Input row ---
+        input_row = QHBoxLayout()
+        input_row.setSpacing(8)
+
+        self.input_field = QLineEdit()
+        self.input_field.setObjectName("inputField")
+        self.input_field.setPlaceholderText("Type a command...")
+        self.input_field.returnPressed.connect(self._on_send)
+        input_row.addWidget(self.input_field)
 
         self.mic_btn = QPushButton("MIC")
         self.mic_btn.setObjectName("micButton")
-        self.mic_btn.setFixedSize(60, 60)
+        self.mic_btn.setFixedSize(45, 38)
         self.mic_btn.clicked.connect(self._on_mic_click)
-        btn_layout.addWidget(self.mic_btn)
+        input_row.addWidget(self.mic_btn)
 
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
+        self.send_btn = QPushButton("Send")
+        self.send_btn.setObjectName("sendButton")
+        self.send_btn.setFixedSize(60, 38)
+        self.send_btn.clicked.connect(self._on_send)
+        input_row.addWidget(self.send_btn)
+
+        layout.addLayout(input_row)
 
     def _connect_signals(self):
         self.signals.state_changed.connect(self._on_state_changed)
@@ -130,11 +134,33 @@ class WednesdayWindow(QMainWindow):
         self.signals.response_update.connect(self._on_response)
         self.signals.status_update.connect(self._on_status)
 
+    def _on_send(self):
+        """Handle text submission from input field."""
+        text = self.input_field.text().strip()
+        if not text:
+            return
+        self.input_field.clear()
+        self._append_chat("You", text)
+        self.signals.text_submitted.emit(text)
+
     def _on_mic_click(self):
         """Toggle listening / wake-up from the MIC button."""
         self.signals.mic_clicked.emit()
         self.signals.status_update.emit("Listening...")
         self.signals.state_changed.emit("listening")
+
+    def _append_chat(self, sender, message):
+        """Append a message to the chat history."""
+        if sender == "You":
+            color = COLORS["text_primary"]
+        else:
+            color = COLORS["accent_light"]
+        self.chat_history.append(
+            f'<span style="color:{color};"><b>{sender}:</b> {message}</span>'
+        )
+        # Auto-scroll to bottom
+        scrollbar = self.chat_history.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
     # --- Signal handlers (run on GUI thread) ---
 
@@ -152,13 +178,13 @@ class WednesdayWindow(QMainWindow):
 
     @Slot(str)
     def _on_transcript(self, text: str):
-        display = text if len(text) <= 120 else text[:120] + "..."
-        self.transcript_label.setText(f'You: "{display}"')
+        """Handle mic-captured user speech — append to chat."""
+        self._append_chat("You", text)
 
     @Slot(str)
     def _on_response(self, text: str):
-        display = text if len(text) <= 300 else text[:300] + "..."
-        self.response_label.setText(display)
+        """Handle assistant response — append to chat."""
+        self._append_chat("Wednesday", text)
 
     @Slot(str)
     def _on_status(self, text: str):

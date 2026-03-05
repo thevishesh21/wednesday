@@ -6,6 +6,7 @@ Main entry point.
 import sys
 import os
 import threading
+import queue
 import time
 import logging
 
@@ -43,6 +44,8 @@ class WednesdayAssistant:
         self.long_memory = LongTermMemory()
         self.confirmations = ConfirmationManager()
         self._awake = False
+        self._input_queue = queue.Queue()
+        self._gui_input = False
         logger.info("Wednesday Assistant initialized.")
 
     def start(self):
@@ -65,7 +68,17 @@ class WednesdayAssistant:
             if not self._awake:
                 self._set_state(AssistantState.SLEEPING)
                 text = self._listen_quietly()
-                if text and self.wake_detector.is_wake_word(text):
+                if not text:
+                    continue
+
+                # Auto-wake on GUI text input (no wake word needed)
+                if self._gui_input:
+                    self._awake = True
+                    self._set_state(AssistantState.LISTENING)
+                    self._process_command(text)
+                    continue
+
+                if self.wake_detector.is_wake_word(text):
                     self._awake = True
                     remainder = self.wake_detector.strip_wake_word(text)
                     self._set_state(AssistantState.LISTENING)
@@ -93,7 +106,9 @@ class WednesdayAssistant:
 
     def _process_command(self, text):
         """Process a single user command."""
-        self._update_transcript(text)
+        # Only emit transcript for mic input; GUI input is already in the chat
+        if not self._gui_input:
+            self._update_transcript(text)
 
         if self.confirmations.has_pending():
             confirmed = self.confirmations.confirm(text)
@@ -221,13 +236,40 @@ class WednesdayAssistant:
         self.speaker.speak(text)
         self._set_state(AssistantState.LISTENING)
 
+    def submit_text(self, text):
+        """Accept text input from the GUI."""
+        self._input_queue.put(text)
+
+    def _get_input(self) -> str | None:
+        """Get input from GUI text box or microphone."""
+        # Check GUI queue first (non-blocking)
+        try:
+            text = self._input_queue.get_nowait()
+            if text:
+                self._gui_input = True
+                return text
+        except queue.Empty:
+            pass
+
+        if self.listener.has_mic:
+            # Try microphone (blocks for LISTEN_TIMEOUT)
+            self._gui_input = False
+            return self.listener.listen()
+        else:
+            # No mic — wait on GUI queue with short timeout
+            try:
+                self._gui_input = True
+                return self._input_queue.get(timeout=0.5)
+            except queue.Empty:
+                return None
+
     def _listen(self):
-        """Listen for a command with full timeout."""
-        return self.listener.listen()
+        """Listen for a command via GUI or microphone."""
+        return self._get_input()
 
     def _listen_quietly(self):
-        """Listen for wake word."""
-        return self.listener.listen()
+        """Listen for wake word via GUI or microphone."""
+        return self._get_input()
 
     def _set_state(self, state):
         app_state.state = state
@@ -271,6 +313,9 @@ def run():
     window.show()
 
     assistant = WednesdayAssistant(gui_signals=window.signals)
+
+    # Wire GUI text input to assistant
+    window.signals.text_submitted.connect(assistant.submit_text)
 
     # Wire MIC button to wake assistant from sleep
     def on_mic_clicked():

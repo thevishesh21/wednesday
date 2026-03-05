@@ -44,32 +44,53 @@ QLabel#statusLabel {{
     font-family: {FONT_FAMILY};
     font-size: 13px;
 }}
-QLabel#transcriptLabel {{
+QTextEdit#chatHistory {{
+    background-color: {COLORS['bg_panel']};
     color: {COLORS['text_primary']};
+    border: 1px solid {COLORS['bg_card']};
+    border-radius: 8px;
+    padding: 10px;
     font-family: {FONT_FAMILY};
     font-size: 12px;
-    padding: 8px;
 }}
-QLabel#responseLabel {{
-    color: {COLORS['accent_light']};
+QLineEdit#inputField {{
+    background-color: {COLORS['bg_panel']};
+    color: {COLORS['text_primary']};
+    border: 1px solid {COLORS['bg_card']};
+    border-radius: 8px;
+    padding: 8px 12px;
     font-family: {FONT_FAMILY};
-    font-size: 12px;
-    padding: 8px;
+    font-size: 13px;
+}}
+QLineEdit#inputField:focus {{
+    border: 1px solid {COLORS['accent']};
 }}
 QPushButton#micButton {{
+    background-color: {COLORS['bg_card']};
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: bold;
+}}
+QPushButton#micButton:hover {{
+    background-color: {COLORS['accent']};
+}}
+QPushButton#micButton:pressed {{
+    background-color: #c0392b;
+}}
+QPushButton#sendButton {{
     background-color: {COLORS['accent']};
     color: white;
     border: none;
-    border-radius: 25px;
-    font-size: 14px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: bold;
-    min-width: 50px;
-    min-height: 50px;
 }}
-QPushButton#micButton:hover {{
+QPushButton#sendButton:hover {{
     background-color: {COLORS['accent_light']};
 }}
-QPushButton#micButton:pressed {{
+QPushButton#sendButton:pressed {{
     background-color: #c0392b;
 }}
 QPushButton#closeButton {{
