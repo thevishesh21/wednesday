@@ -1,11 +1,24 @@
 """
 Wednesday - Text-to-Speech Speaker
 Uses pyttsx3 for offline TTS on Windows.
+Selects the most natural-sounding voice available.
 """
 
 import threading
+import logging
 import pyttsx3
 import config
+
+logger = logging.getLogger("Wednesday")
+
+# Voice preference order — more natural-sounding voices first
+_PREFERRED_VOICES = [
+    "zira",       # Microsoft Zira (female, clear)
+    "david",      # Microsoft David (male, clear)
+    "hazel",      # Microsoft Hazel (UK female)
+    "mark",       # Microsoft Mark
+    "female",     # Generic fallback
+]
 
 
 class Speaker:
@@ -17,16 +30,28 @@ class Speaker:
     def _init_engine(self):
         try:
             self._engine = pyttsx3.init()
+            # Slightly slower rate for more natural feel
             self._engine.setProperty("rate", config.TTS_RATE)
             self._engine.setProperty("volume", config.TTS_VOLUME)
-            # Try to select a female voice if available
+
+            # Pick the best available voice
             voices = self._engine.getProperty("voices")
-            for voice in voices:
-                if "zira" in voice.name.lower() or "female" in voice.name.lower():
-                    self._engine.setProperty("voice", voice.id)
+            selected = False
+            for pref in _PREFERRED_VOICES:
+                for voice in voices:
+                    if pref in voice.name.lower():
+                        self._engine.setProperty("voice", voice.id)
+                        logger.info("[Speaker] Using voice: %s", voice.name)
+                        selected = True
+                        break
+                if selected:
                     break
+
+            if not selected and voices:
+                logger.info("[Speaker] Using default voice: %s", voices[0].name)
+
         except Exception as e:
-            print(f"[Speaker] TTS engine init failed: {e}")
+            logger.error("[Speaker] TTS engine init failed: %s", e)
             self._engine = None
 
     def speak(self, text: str):
@@ -48,7 +73,7 @@ class Speaker:
                     except Exception:
                         pass
             except Exception as e:
-                print(f"[Speaker] TTS error: {e}")
+                logger.error("[Speaker] TTS error: %s", e)
 
     def is_available(self) -> bool:
         return self._engine is not None

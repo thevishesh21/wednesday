@@ -94,3 +94,54 @@ def mute() -> str:
         return "Toggled mute."
     except Exception as e:
         return f"Failed to mute: {e}"
+
+
+def brightness_up() -> str:
+    """Increase screen brightness using PowerShell WMI."""
+    try:
+        subprocess.run(
+            ["powershell", "-command",
+             "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods)"
+             ".WmiSetBrightness(1, "
+             "([Math]::Min(100, (Get-WmiObject -Namespace root/WMI "
+             "-Class WmiMonitorBrightness).CurrentBrightness + 20)))"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return "Brightness increased."
+    except Exception as e:
+        return f"Could not change brightness: {e}"
+
+
+def brightness_down() -> str:
+    """Decrease screen brightness using PowerShell WMI."""
+    try:
+        subprocess.run(
+            ["powershell", "-command",
+             "(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods)"
+             ".WmiSetBrightness(1, "
+             "([Math]::Max(0, (Get-WmiObject -Namespace root/WMI "
+             "-Class WmiMonitorBrightness).CurrentBrightness - 20)))"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return "Brightness decreased."
+    except Exception as e:
+        return f"Could not change brightness: {e}"
+
+
+def open_task_manager() -> str:
+    """Open Windows Task Manager."""
+    try:
+        subprocess.Popen(["taskmgr"], shell=True)
+        return "Opening Task Manager."
+    except Exception as e:
+        return f"Failed to open Task Manager: {e}"
+
+
+def empty_recycle_bin() -> str:
+    """Empty the Windows Recycle Bin."""
+    try:
+        import ctypes
+        ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, 0x07)
+        return "Recycle bin emptied."
+    except Exception as e:
+        return f"Failed to empty recycle bin: {e}"

@@ -1,18 +1,25 @@
 """
 Wednesday - Main GUI Application
 PySide6-based floating assistant window with chat interface.
+Includes sound effects for state changes and message bubbles.
 """
 
-import sys
+import os
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QSizePolicy, QTextEdit, QLineEdit,
 )
-from PySide6.QtCore import Qt, Signal, QObject, Slot, QPoint
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Signal, QObject, Slot, QUrl
+
+try:
+    from PySide6.QtMultimedia import QSoundEffect
+    _HAS_AUDIO = True
+except ImportError:
+    _HAS_AUDIO = False
 
 from gui.theme import MAIN_STYLESHEET, COLORS, FONT_FAMILY
 from gui.animations import OrbWidget
+import config
 
 
 class GUISignals(QObject):
@@ -32,13 +39,16 @@ class WednesdayWindow(QMainWindow):
         super().__init__()
         self.signals = GUISignals()
         self._drag_pos = None
+        self._sounds = {}
+        self._last_state = "sleeping"
         self._setup_window()
         self._build_ui()
         self._connect_signals()
+        self._load_sounds()
 
     def _setup_window(self):
         self.setWindowTitle("Wednesday")
-        self.setFixedSize(420, 620)
+        self.setFixedSize(440, 660)
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -60,11 +70,12 @@ class WednesdayWindow(QMainWindow):
         self.setCentralWidget(central)
 
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(20, 15, 20, 20)
-        layout.setSpacing(10)
+        layout.setContentsMargins(22, 16, 22, 20)
+        layout.setSpacing(12)
 
         # --- Title bar ---
         title_bar = QHBoxLayout()
+        title_bar.setContentsMargins(0, 0, 0, 0)
 
         title_label = QLabel("Wednesday")
         title_label.setObjectName("titleLabel")
@@ -80,20 +91,26 @@ class WednesdayWindow(QMainWindow):
 
         layout.addLayout(title_bar)
 
-        # --- Orb + Status row ---
-        orb_row = QHBoxLayout()
-        orb_row.addStretch()
+        # --- Orb + Status (centered column) ---
+        orb_container = QHBoxLayout()
+        orb_container.addStretch()
+
+        orb_col = QVBoxLayout()
+        orb_col.setSpacing(4)
+        orb_col.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.orb = OrbWidget()
-        self.orb.setFixedSize(80, 80)
-        orb_row.addWidget(self.orb)
+        self.orb.setFixedSize(90, 90)
+        orb_col.addWidget(self.orb, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self.status_label = QLabel("Sleeping")
         self.status_label.setObjectName("statusLabel")
-        orb_row.addWidget(self.status_label)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        orb_col.addWidget(self.status_label)
 
-        orb_row.addStretch()
-        layout.addLayout(orb_row)
+        orb_container.addLayout(orb_col)
+        orb_container.addStretch()
+        layout.addLayout(orb_container)
 
         # --- Chat history ---
         self.chat_history = QTextEdit()
@@ -116,13 +133,13 @@ class WednesdayWindow(QMainWindow):
 
         self.mic_btn = QPushButton("MIC")
         self.mic_btn.setObjectName("micButton")
-        self.mic_btn.setFixedSize(45, 38)
+        self.mic_btn.setFixedSize(48, 40)
         self.mic_btn.clicked.connect(self._on_mic_click)
         input_row.addWidget(self.mic_btn)
 
         self.send_btn = QPushButton("Send")
         self.send_btn.setObjectName("sendButton")
-        self.send_btn.setFixedSize(60, 38)
+        self.send_btn.setFixedSize(64, 40)
         self.send_btn.clicked.connect(self._on_send)
         input_row.addWidget(self.send_btn)
 
@@ -133,6 +150,42 @@ class WednesdayWindow(QMainWindow):
         self.signals.transcript_update.connect(self._on_transcript)
         self.signals.response_update.connect(self._on_response)
         self.signals.status_update.connect(self._on_status)
+
+    def _load_sounds(self):
+        """Load WAV sound effects from sounds/ directory (if available)."""
+        if not _HAS_AUDIO:
+            return
+
+        # Map state transitions to sound file names
+        sound_map = {
+            "listening": "wake.wav",
+            "thinking":  "thinking.wav",
+            "speaking":  "confirm.wav",
+        }
+
+        sounds_dir = getattr(config, "SOUNDS_DIR", "")
+        if not sounds_dir or not os.path.isdir(sounds_dir):
+            return
+
+        for state_name, filename in sound_map.items():
+            path = os.path.join(sounds_dir, filename)
+            if os.path.isfile(path):
+                try:
+                    effect = QSoundEffect()
+                    effect.setSource(QUrl.fromLocalFile(path))
+                    effect.setVolume(0.3)
+                    self._sounds[state_name] = effect
+                except Exception:
+                    pass
+
+    def _play_sound(self, state: str):
+        """Play a sound effect for a state transition (if loaded)."""
+        effect = self._sounds.get(state)
+        if effect:
+            try:
+                effect.play()
+            except Exception:
+                pass
 
     def _on_send(self):
         """Handle text submission from input field."""
@@ -150,14 +203,28 @@ class WednesdayWindow(QMainWindow):
         self.signals.state_changed.emit("listening")
 
     def _append_chat(self, sender, message):
-        """Append a message to the chat history."""
+        """Append a styled message bubble to the chat history."""
         if sender == "You":
-            color = COLORS["text_primary"]
+            bubble_bg = "#1e1b4b"
+            text_color = COLORS["user_msg"]
+            label_color = COLORS["text_muted"]
+            align = "left"
         else:
-            color = COLORS["accent_light"]
-        self.chat_history.append(
-            f'<span style="color:{color};"><b>{sender}:</b> {message}</span>'
+            bubble_bg = "#0a2e1a"
+            text_color = COLORS["assistant_msg"]
+            label_color = COLORS["text_muted"]
+            align = "left"
+
+        html = (
+            f'<div style="margin: 4px 0;">'
+            f'<span style="color:{label_color}; font-size:11px; font-weight:600;">'
+            f'{sender}</span><br>'
+            f'<div style="background-color:{bubble_bg}; border-radius:10px; '
+            f'padding:8px 12px; margin-top:2px; display:inline-block;">'
+            f'<span style="color:{text_color}; font-size:13px;">{message}</span>'
+            f'</div></div>'
         )
+        self.chat_history.append(html)
         # Auto-scroll to bottom
         scrollbar = self.chat_history.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
@@ -172,9 +239,22 @@ class WednesdayWindow(QMainWindow):
             "listening": "Listening...",
             "thinking": "Thinking...",
             "speaking": "Speaking...",
+            "dictating": "Dictating...",
             "error": "Error",
         }
         self.status_label.setText(state_display.get(state, state))
+
+        # Update status label color based on state
+        color = COLORS.get(state, COLORS["text_secondary"])
+        self.status_label.setStyleSheet(
+            f"color: {color}; font-family: {FONT_FAMILY}; font-size: 12px; "
+            f"font-weight: 500; letter-spacing: 0.5px;"
+        )
+
+        # Play sound effect on state transitions
+        if state != self._last_state:
+            self._play_sound(state)
+            self._last_state = state
 
     @Slot(str)
     def _on_transcript(self, text: str):

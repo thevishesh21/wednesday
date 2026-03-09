@@ -41,6 +41,24 @@ ENERGY_THRESHOLD = 300    # microphone energy threshold
 TTS_RATE = 175            # words per minute for pyttsx3
 TTS_VOLUME = 1.0          # 0.0 to 1.0
 
+# OpenAI Vision model (for screen awareness)
+OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+
+# Contacts database
+CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
+
+# Workflows file
+WORKFLOWS_FILE = os.path.join(DATA_DIR, "workflows.json")
+
+# Context memory
+CONTEXT_MEMORY_FILE = os.path.join(DATA_DIR, "context_memory.json")
+
+# Plugin directory
+PLUGIN_DIR = os.path.join(BASE_DIR, "plugins")
+
+# Sound effects directory
+SOUNDS_DIR = os.path.join(BASE_DIR, "sounds")
+
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,

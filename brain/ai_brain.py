@@ -3,8 +3,12 @@ Wednesday - AI Brain
 Handles all interactions with the OpenAI API.
 """
 
+import logging
+
 from openai import OpenAI
 import config
+
+logger = logging.getLogger("Wednesday")
 
 
 SYSTEM_PROMPT = (
@@ -55,7 +59,28 @@ class AIBrain:
             )
             return reply
         except Exception as e:
-            return f"Sorry, I encountered an error contacting OpenAI: {e}"
+            error_message = str(e)
+            logger.error("[AIBrain] OpenAI API error: %s", error_message)
+
+            if "429" in error_message or "insufficient_quota" in error_message:
+                return (
+                    "Sorry, my AI brain is currently unavailable because "
+                    "the API quota has been exceeded. Please try again later."
+                )
+
+            if "401" in error_message or "invalid_api_key" in error_message:
+                return (
+                    "Sorry, there is an issue with my API key configuration. "
+                    "Please check the settings."
+                )
+
+            if "timeout" in error_message.lower() or "connection" in error_message.lower():
+                return (
+                    "Sorry, I could not reach my AI brain. "
+                    "Please check your internet connection and try again."
+                )
+
+            return "Sorry, I had trouble contacting my AI brain. Please try again in a moment."
 
     def reset_conversation(self):
         """Clear conversation history."""
