@@ -1,31 +1,60 @@
-# Virtual environment
-.venv/
-venv/
-env/
+# Wednesday AI Assistant - Git Ignore List
 
-# Python
+# 1. Python cache
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
-*.egg-info/
-dist/
-build/
+*.pyd
 
-# Environment variables
-.env
+# 2. Virtual environment
+venv/
+env/
+.env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE
+# 3. Logs
+logs/
+*.log
+
+# 4. Memory / Data files
+# Ignore JSON data like memory and reminders
+*.json
+
+# 5. OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+ehthumbs_vista.db
+Thumbs.db
+
+# 6. IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS files
-Thumbs.db
-Desktop.ini
-.DS_Store
+# 7. Temporary / Backup files
+*.tmp
+*.bak
+*.swp
+*~
 
-# Logs and data
-data/logs/
-data/memory/
+# 8. Media / Large files
+# Screenshots and videos
+screenshots/
+*.mp4
+*.avi
+*.png
+*.jpg
+*.jpeg
 
-# PyInstaller
-*.spec
+# Miscellaneous
+# Ignore PyAutoGUI failsafe screenshot if it generates one
+*.pyautogui

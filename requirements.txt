@@ -1,10 +1,20 @@
-openai>=1.14.0
-python-dotenv>=1.0.0
-SpeechRecognition>=3.10.0
-pyttsx3>=2.90
-PyAudio>=0.2.14
-PySide6>=6.6.0
-pycaw>=20230407
-comtypes>=1.2.0
-mss>=9.0.0
-pyautogui>=0.9.54
+# Wednesday AI Assistant — Dependencies
+# Phase 1: Voice
+pyttsx3
+SpeechRecognition
+pyaudio
+
+# Phase 2-4: Tools & Automation
+pyautogui
+keyboard
+
+# Phase 5: Vision
+Pillow
+pytesseract
+
+# Phase 9: Gesture Control
+opencv-python
+mediapipe
+
+# Phase 3: AI Brain (HTTP calls)
+requests

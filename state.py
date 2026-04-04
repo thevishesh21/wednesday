@@ -1,67 +1,71 @@
 """
-Wednesday — Application State
-Thread-safe global state for the assistant.
+Wednesday AI Assistant — State Manager
+Tracks the last command, last app, last result, and a rolling buffer
+of the last N commands for short-term conversational context.
 """
 
-import threading
-from enum import Enum, auto
+from collections import deque
+from utils.logger import get_logger
+import config
+
+log = get_logger("state")
 
 
-class AssistantState(Enum):
-    SLEEPING = auto()
-    LISTENING = auto()
-    THINKING = auto()
-    SPEAKING = auto()
-    ERROR = auto()
-
-
-class AppState:
-    """Thread-safe state container for the assistant."""
+class StateManager:
+    """
+    Singleton-style state tracker.
+    Keeps short-term context of the assistant's activity.
+    """
 
     def __init__(self):
-        self._lock = threading.Lock()
-        self._state = AssistantState.SLEEPING
-        self._running = True
-        self._listeners = []
+        self.last_command: str = ""
+        self.last_tool: str = ""
+        self.last_result: str = ""
+        self.last_app: str = ""
+        self.context: dict = {}
 
-    @property
-    def state(self) -> AssistantState:
-        with self._lock:
-            return self._state
+        # Rolling buffer of recent commands (for conversational context)
+        self._history = deque(maxlen=config.CONTEXT_HISTORY_SIZE)
 
-    @state.setter
-    def state(self, new_state: AssistantState):
-        with self._lock:
-            old = self._state
-            self._state = new_state
-        # Notify listeners outside lock to avoid deadlock
-        for callback in self._listeners:
-            try:
-                callback(old, new_state)
-            except Exception:
-                pass
+        log.info(f"State manager initialized (history size: {config.CONTEXT_HISTORY_SIZE})")
 
-    @property
-    def running(self) -> bool:
-        with self._lock:
-            return self._running
+    def update(self, command: str, tool: str = "", result: str = "",
+               app: str = "") -> None:
+        """Update state after a command is processed."""
+        self.last_command = command
+        self.last_tool = tool or self.last_tool
+        self.last_result = result or self.last_result
+        self.last_app = app or self.last_app
 
-    @running.setter
-    def running(self, value: bool):
-        with self._lock:
-            self._running = value
+        self._history.append({
+            "command": command,
+            "tool": tool,
+            "result": result,
+        })
 
-    def on_state_change(self, callback):
-        """Register a callback for state changes: callback(old_state, new_state)."""
-        self._listeners.append(callback)
+        log.debug(f"State updated: cmd='{command}', tool='{tool}'")
 
-    def remove_listener(self, callback):
-        """Remove a state change listener."""
-        try:
-            self._listeners.remove(callback)
-        except ValueError:
-            pass
+    def get_history(self) -> list[dict]:
+        """Return the last N commands as a list."""
+        return list(self._history)
+
+    def get_context_summary(self) -> str:
+        """Return a one-line summary of recent commands (for AI prompts)."""
+        if not self._history:
+            return "No previous commands."
+        recent = [h["command"] for h in self._history]
+        return "Recent commands: " + " → ".join(recent)
+
+    def clear(self) -> None:
+        """Reset all state."""
+        self.last_command = ""
+        self.last_tool = ""
+        self.last_result = ""
+        self.last_app = ""
+        self.context = {}
+        self._history.clear()
+        log.info("State cleared.")
 
 
-# Global singleton
-app_state = AppState()
+# ── Global instance ─────────────────────────────────────────────
+state = StateManager()

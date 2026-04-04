@@ -1,71 +1,79 @@
 """
-Wednesday - Configuration
-Loads environment variables and provides app-wide settings.
+Wednesday AI Assistant — Global Configuration
+All settings and constants for every subsystem.
 """
 
-import os
-import logging
-from dotenv import load_dotenv
-
-# Load .env from project root
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
-
-# OpenAI
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-
-# Assistant identity
+# ─── Assistant Identity ───────────────────────────────────────────
 ASSISTANT_NAME = "Wednesday"
-GREETING = "Hi, I am Wednesday, your personal AI assistant. How can I help you?"
+WAKE_WORD = "hey wednesday"
 
-# Wake word phrases
-WAKE_PHRASES = ["hey wednesday", "wake up wednesday", "wednesday"]
-SLEEP_PHRASES = ["go to sleep", "that's all", "goodbye wednesday"]
+# ─── Voice Settings ───────────────────────────────────────────────
+VOICE_RATE = 170
+VOICE_INDEX = 1  # 0 = male, 1 = female (if available)
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-MEMORY_DIR = os.path.join(DATA_DIR, "memory")
-LOG_DIR = os.path.join(DATA_DIR, "logs")
+# ─── Listener Settings ───────────────────────────────────────────
+LISTEN_TIMEOUT = 5
+PHRASE_TIME_LIMIT = 10
+LISTEN_LANGUAGE = "en-IN"
 
-# Ensure data directories exist
-os.makedirs(MEMORY_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
+# ─── Greeting Responses (varied + natural) ───────────────────────
+WAKE_RESPONSES = [
+    "Yes boss, how can I help you?",
+    "Ji sir, bataiye!",
+    "Haan boss, I'm all ears!",
+    "Haan boss, kya karna hai?",
+    "At your service, boss!",
+    "Ready boss! Bolo kya chahiye?",
+    "Main hoon boss, bataiye!",
+    "Yes sir, aapki Wednesday hazir hai!",
+    "Bolo boss, kya help chahiye?",
+    "Ji boss, sun rahi hoon!",
+]
 
-# Audio settings
-LISTEN_TIMEOUT = 5        # seconds to wait for speech
-PHRASE_TIME_LIMIT = 15    # max seconds for a single phrase
-ENERGY_THRESHOLD = 300    # microphone energy threshold
+# ─── Input Mode ──────────────────────────────────────────────────
+# "voice" = microphone, "text" = keyboard, "auto" = voice with text fallback
+INPUT_MODE = "auto"
+TEXT_INPUT_PROMPT = "  🎤 You (type command): "
 
-# TTS settings
-TTS_RATE = 175            # words per minute for pyttsx3
-TTS_VOLUME = 1.0          # 0.0 to 1.0
+# ─── Logger Settings ─────────────────────────────────────────────
+LOG_DIR = "logs"
+LOG_FILE = "logs/wednesday.log"
+LOG_TO_FILE = True
+LOG_TO_CONSOLE = True
 
-# OpenAI Vision model (for screen awareness)
-OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+# ─── Safe Mode ────────────────────────────────────────────────────
+SAFE_MODE = True
+DANGEROUS_TOOLS = ["delete_file", "press_key", "close_app", "hotkey"]
 
-# Contacts database
-CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
+# ─── State / Context ─────────────────────────────────────────────
+CONTEXT_HISTORY_SIZE = 3
 
-# Workflows file
-WORKFLOWS_FILE = os.path.join(DATA_DIR, "workflows.json")
+# ─── AI Brain ────────────────────────────────────────────────────
+OPENROUTER_API_KEY = ""       # Get free key from https://openrouter.ai
+OPENROUTER_MODEL = "mistralai/mistral-7b-instruct:free"
+HUGGINGFACE_API_KEY = ""      # Get free key from https://huggingface.co
+HUGGINGFACE_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+AI_RETRY_COUNT = 1
+AI_TIMEOUT = 15  # seconds
 
-# Context memory
-CONTEXT_MEMORY_FILE = os.path.join(DATA_DIR, "context_memory.json")
+# ─── Memory ──────────────────────────────────────────────────────
+MEMORY_FILE = "memory/memory.json"
 
-# Plugin directory
-PLUGIN_DIR = os.path.join(BASE_DIR, "plugins")
+# ─── Reminders ───────────────────────────────────────────────────
+REMINDERS_FILE = "reminders/reminders.json"
+REMINDER_CHECK_INTERVAL = 30  # seconds
 
-# Sound effects directory
-SOUNDS_DIR = os.path.join(BASE_DIR, "sounds")
+# ─── Proactive Conversation ──────────────────────────────────────
+IDLE_TIMEOUT_MINUTES = 15
+PROACTIVE_ENABLED = True
 
-# Logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler(os.path.join(LOG_DIR, "wednesday.log"), encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-logger = logging.getLogger("Wednesday")
+# ─── Screen Vision ───────────────────────────────────────────────
+SCREENSHOT_DIR = "screenshots"
+TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# ─── Gesture Control ─────────────────────────────────────────────
+GESTURE_SMOOTHING_ALPHA = 0.3
+GESTURE_CLICK_COOLDOWN_MS = 400
+GESTURE_CONFIDENCE_THRESHOLD = 0.7
+GESTURE_FRAME_GUARD = 2  # consecutive frames needed to trigger click
+GESTURE_CAMERA_INDEX = 0

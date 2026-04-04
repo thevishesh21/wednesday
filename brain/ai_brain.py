@@ -1,89 +1,115 @@
 """
-Wednesday - AI Brain
-Handles all interactions with the OpenAI API.
+Wednesday AI Assistant — AI Brain
+Calls free LLM APIs (OpenRouter → HuggingFace fallback).
+Includes retry logic. If both fail, returns None so fallback.py handles it.
 """
 
-import logging
-
-from openai import OpenAI
+import requests
+import json
+from utils.logger import get_logger
 import config
 
-logger = logging.getLogger("Wednesday")
+log = get_logger("ai_brain")
 
 
-SYSTEM_PROMPT = (
-    "You are Wednesday, a helpful personal AI desktop assistant running on Windows. "
-    "You answer questions concisely and helpfully. Keep responses short and spoken-friendly "
-    "since your output will be read aloud via text-to-speech. "
-    "If the user tells you personal facts (like their name), acknowledge them warmly. "
-    "Do not use markdown formatting, bullet points, or code blocks in answers - "
-    "speak naturally as a voice assistant would."
-)
+def ask_ai(prompt: str, system_prompt: str = "") -> str | None:
+    """
+    Send a prompt to a free LLM API and return the response text.
+    Tries OpenRouter first, then HuggingFace. Retries once on failure.
+
+    Returns:
+        Response text string, or None if all APIs fail.
+    """
+    # Try OpenRouter first
+    if config.OPENROUTER_API_KEY:
+        for attempt in range(1 + config.AI_RETRY_COUNT):
+            result = _call_openrouter(prompt, system_prompt)
+            if result:
+                return result
+            log.warning(f"OpenRouter attempt {attempt + 1} failed.")
+
+    # Fallback to HuggingFace
+    if config.HUGGINGFACE_API_KEY:
+        for attempt in range(1 + config.AI_RETRY_COUNT):
+            result = _call_huggingface(prompt, system_prompt)
+            if result:
+                return result
+            log.warning(f"HuggingFace attempt {attempt + 1} failed.")
+
+    log.error("All AI APIs failed.")
+    return None
 
 
-class AIBrain:
-    def __init__(self):
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
-        self.model = config.OPENAI_MODEL
-        self.conversation_history = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
+def _call_openrouter(prompt: str, system_prompt: str = "") -> str | None:
+    """Call OpenRouter API."""
+    try:
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
-    def ask(self, user_input: str, context: str = "") -> str:
-        """Send a prompt to OpenAI and return the response text."""
-        if context:
-            message_content = f"[Context: {context}]\n{user_input}"
-        else:
-            message_content = user_input
-
-        self.conversation_history.append(
-            {"role": "user", "content": message_content}
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": config.OPENROUTER_MODEL,
+                "messages": messages,
+            },
+            timeout=config.AI_TIMEOUT,
         )
 
-        # Keep conversation history manageable (last 20 messages + system)
-        if len(self.conversation_history) > 21:
-            self.conversation_history = (
-                self.conversation_history[:1] + self.conversation_history[-20:]
-            )
+        if response.status_code == 200:
+            data = response.json()
+            text = data["choices"][0]["message"]["content"].strip()
+            log.info(f"OpenRouter response received ({len(text)} chars)")
+            return text
+        else:
+            log.error(f"OpenRouter HTTP {response.status_code}: {response.text[:200]}")
+            return None
 
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=self.conversation_history,
-                max_tokens=300,
-                temperature=0.7,
-            )
-            reply = response.choices[0].message.content.strip()
-            self.conversation_history.append(
-                {"role": "assistant", "content": reply}
-            )
-            return reply
-        except Exception as e:
-            error_message = str(e)
-            logger.error("[AIBrain] OpenAI API error: %s", error_message)
+    except requests.Timeout:
+        log.error("OpenRouter request timed out.")
+        return None
+    except Exception as e:
+        log.error(f"OpenRouter error: {e}")
+        return None
 
-            if "429" in error_message or "insufficient_quota" in error_message:
-                return (
-                    "Sorry, my AI brain is currently unavailable because "
-                    "the API quota has been exceeded. Please try again later."
-                )
 
-            if "401" in error_message or "invalid_api_key" in error_message:
-                return (
-                    "Sorry, there is an issue with my API key configuration. "
-                    "Please check the settings."
-                )
+def _call_huggingface(prompt: str, system_prompt: str = "") -> str | None:
+    """Call HuggingFace Inference API."""
+    try:
+        full_prompt = f"{system_prompt}\n\nUser: {prompt}\nAssistant:" if system_prompt else prompt
 
-            if "timeout" in error_message.lower() or "connection" in error_message.lower():
-                return (
-                    "Sorry, I could not reach my AI brain. "
-                    "Please check your internet connection and try again."
-                )
+        response = requests.post(
+            f"https://api-inference.huggingface.co/models/{config.HUGGINGFACE_MODEL}",
+            headers={
+                "Authorization": f"Bearer {config.HUGGINGFACE_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={"inputs": full_prompt, "parameters": {"max_new_tokens": 300}},
+            timeout=config.AI_TIMEOUT,
+        )
 
-            return "Sorry, I had trouble contacting my AI brain. Please try again in a moment."
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                text = data[0].get("generated_text", "").strip()
+                # Remove the prompt from the response
+                if text.startswith(full_prompt):
+                    text = text[len(full_prompt):].strip()
+                log.info(f"HuggingFace response received ({len(text)} chars)")
+                return text
+            return None
+        else:
+            log.error(f"HuggingFace HTTP {response.status_code}: {response.text[:200]}")
+            return None
 
-    def reset_conversation(self):
-        """Clear conversation history."""
-        self.conversation_history = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
+    except requests.Timeout:
+        log.error("HuggingFace request timed out.")
+        return None
+    except Exception as e:
+        log.error(f"HuggingFace error: {e}")
+        return None
