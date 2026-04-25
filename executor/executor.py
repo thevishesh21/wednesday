@@ -56,14 +56,26 @@ def run_plan(steps: list[dict]) -> list[dict]:
         # ── 3. Execute (with 1 retry on failure) ─────────────
         result = _execute_with_retry(tool_name, args, max_retries=1)
         result["step"] = i
+
+        # ── 4. Validate result content ────────────────────────
+        # Tools return strings; if it starts with "FAILED:" the action
+        # did not actually succeed even though the function ran.
+        if result["success"] and isinstance(result.get("result"), str):
+            res_text = result["result"]
+            if res_text.startswith("FAILED:"):
+                result["success"] = False
+                result["error"] = res_text.replace("FAILED: ", "")
+                log.warning(f"Tool returned failure: {res_text}")
+
         results.append(result)
 
         # Report result
         if result["success"]:
             log.info(f"Step {i} completed: {result['result']}")
         else:
-            log.error(f"Step {i} failed: {result['error']}")
-            speak(f"Step {i} fail ho gaya: {result['error']}")
+            log.error(f"Step {i} failed: {result.get('error', 'unknown')}")
+            speak(f"Sorry boss, step {i} fail ho gaya.")
+            break  # Stop executing remaining steps
 
     return results
 
@@ -76,17 +88,25 @@ def _execute_with_retry(tool_name: str, args: dict,
     Returns:
         {"tool": str, "success": bool, "result": any, "error": str|None}
     """
+    last_result = None
     for attempt in range(1 + max_retries):
         result = registry.execute(tool_name, args)
         result["tool"] = tool_name
+        last_result = result
 
         if result["success"]:
+            # Also check for FAILED: prefix (tool ran but action failed)
+            res_text = result.get("result", "")
+            if isinstance(res_text, str) and res_text.startswith("FAILED:"):
+                if attempt < max_retries:
+                    log.warning(f"Retry {attempt + 1} for {tool_name} (tool reported failure)...")
+                    continue
             return result
 
         if attempt < max_retries:
             log.warning(f"Retry {attempt + 1} for {tool_name}...")
 
-    return result
+    return last_result
 
 
 def _is_confirmed(text: str) -> bool:

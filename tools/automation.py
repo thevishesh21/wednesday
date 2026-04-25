@@ -30,7 +30,7 @@ def type_text(text: str) -> str:
         return f"Typed: '{text}'"
     except Exception as e:
         log.error(f"Type failed: {e}")
-        return f"Typing failed: {e}"
+        return f"FAILED: Typing failed: {e}"
 
 
 def hotkey(*keys) -> str:
@@ -46,7 +46,7 @@ def hotkey(*keys) -> str:
         return f"Pressed: {'+'.join(keys)}"
     except Exception as e:
         log.error(f"Hotkey failed: {e}")
-        return f"Hotkey failed: {e}"
+        return f"FAILED: Hotkey failed: {e}"
 
 
 def press_key(key: str) -> str:
@@ -62,7 +62,7 @@ def press_key(key: str) -> str:
         return f"Pressed: {key}"
     except Exception as e:
         log.error(f"Key press failed: {e}")
-        return f"Key press failed: {e}"
+        return f"FAILED: Key press failed: {e}"
 
 
 def mouse_click(x: int = None, y: int = None, button: str = "left") -> str:
@@ -83,7 +83,7 @@ def mouse_click(x: int = None, y: int = None, button: str = "left") -> str:
         return f"Clicked at ({x}, {y}) with {button} button"
     except Exception as e:
         log.error(f"Click failed: {e}")
-        return f"Click failed: {e}"
+        return f"FAILED: Click failed: {e}"
 
 
 def move_mouse(x: int, y: int) -> str:
@@ -100,7 +100,7 @@ def move_mouse(x: int, y: int) -> str:
         return f"Mouse moved to ({x}, {y})"
     except Exception as e:
         log.error(f"Mouse move failed: {e}")
-        return f"Mouse move failed: {e}"
+        return f"FAILED: Mouse move failed: {e}"
 
 
 def scroll(amount: int) -> str:
@@ -116,7 +116,7 @@ def scroll(amount: int) -> str:
         return f"Scrolled {'up' if amount > 0 else 'down'} by {abs(amount)}"
     except Exception as e:
         log.error(f"Scroll failed: {e}")
-        return f"Scroll failed: {e}"
+        return f"FAILED: Scroll failed: {e}"
 
 
 def screenshot_position() -> str:

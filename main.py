@@ -270,20 +270,34 @@ def _handle_builtin(command: str) -> str | None:
 
 
 def _report_results(results: list[dict]) -> None:
-    """Speak a summary of execution results."""
+    """Speak a summary of execution results — never fake success."""
+    if not results:
+        speak("Kuch execute nahi ho paaya, boss.")
+        return
+
     success = sum(1 for r in results if r.get("success"))
     total = len(results)
+
+    for r in results:
+        log.info(f"[DEBUG] Tool result: success={r.get('success')} | output={r.get('result', r.get('error', 'None'))}")
 
     if total == 1:
         r = results[0]
         if r["success"]:
-            speak(f"Done, boss! {r.get('result', '')}")
-        # Error already spoken by executor
+            # Double-check the result text isn't a failure message
+            result_text = str(r.get("result", ""))
+            if result_text.startswith("FAILED:"):
+                speak("Sorry boss, I couldn't complete that.")
+            else:
+                speak(f"Done! {result_text}")
+        else:
+            speak("Sorry boss, I couldn't complete that.")
     elif success == total:
         speak(f"Sab {total} steps complete, boss!")
     elif success > 0:
-        speak(f"{success}/{total} steps done. Kuch fail ho gaye.")
-    # All failed case already handled by executor
+        speak(f"{success}/{total} steps done. Kuch fail ho gaye, boss.")
+    else:
+        speak("Sorry boss, I couldn't complete that.")
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -414,8 +428,57 @@ def shutdown():
     thread_manager.stop_all()
     speak("Bye boss! Wednesday signing off. 😊")
     log.info("Wednesday stopped.")
-    sys.exit(0)
+
+
+# ═════════════════════════════════════════════════════════════════
+#  GUI Mode  (JARVIS interface — default)
+# ═════════════════════════════════════════════════════════════════
+
+def main_gui():
+    """
+    Launch the JARVIS-style GUI.
+    Boots backend (tools, health checks, threads) then opens the
+    PyQt6 window.  The GUI drives voice + commands via its own
+    worker threads; the CLI loop is NOT started.
+    """
+    try:
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtGui import QFont
+    except ImportError:
+        log.error("PyQt6 not installed. Run:  pip install PyQt6")
+        log.info("Falling back to CLI mode...")
+        main()
+        return
+
+    # 1. Boot backend
+    _register_all_tools()
+    startup_checks()
+    _start_background_threads()
+
+    # 2. Patch speak() so it emits to the GUI chat panel
+    from gui.bridge import AssistantBridge
+    bridge = AssistantBridge.instance()
+    bridge.patch_backend()
+
+    # 3. Launch Qt application
+    app = QApplication(sys.argv)
+    app.setApplicationName("Wednesday AI")
+    app.setFont(QFont("Segoe UI", 12))
+
+    from gui.app import WednesdayGUI
+    window = WednesdayGUI()
+    window.show()
+
+    log.info("GUI launched — JARVIS mode active.")
+    exit_code = app.exec()
+
+    # 4. Clean shutdown when window is closed
+    shutdown()
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
-    main()
+    if "--cli" in sys.argv:
+        main()          # Original terminal voice loop
+    else:
+        main_gui()      # JARVIS GUI (default)

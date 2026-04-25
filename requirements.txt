@@ -18,3 +18,6 @@ mediapipe
 
 # Phase 3: AI Brain (HTTP calls)
 requests
+
+# Phase 10: GUI
+PyQt6

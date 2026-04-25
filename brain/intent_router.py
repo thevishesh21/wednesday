@@ -21,8 +21,25 @@ def _build_routes():
     Each route is: (compiled_regex, tool_name, args_builder)
     where args_builder takes the regex match and returns a dict.
     """
+    # ── Known website names (must be BEFORE generic "open" route) ──
+    _WEBSITE_NAMES = (
+        "youtube|google|gmail|github|stackoverflow|chatgpt|"
+        "twitter|instagram|facebook|linkedin|reddit|netflix|"
+        "amazon|flipkart|wikipedia|whatsapp web|spotify web"
+    )
+
     routes = [
-        # ── Open apps ────────────────────────────────────────
+        # ── Open known websites (matched FIRST) ──────────────
+        (rf"(?:open|launch|start|go to|visit)\s+({_WEBSITE_NAMES})(?:\s|$)",
+         "open_website",
+         lambda m: {"url": m.group(1).strip()}),
+
+        # ── Open website (explicit phrasing) ─────────────────
+        (r"(?:go to|visit|open website|open site)\s+(.+)",
+         "open_website",
+         lambda m: {"url": m.group(1).strip()}),
+
+        # ── Open apps (generic fallback for non-website names) 
         (r"(?:open|launch|start|run)\s+(.+)",
          "open_app",
          lambda m: {"name": m.group(1).strip()}),
@@ -32,10 +49,6 @@ def _build_routes():
          "close_app",
          lambda m: {"name": m.group(1).strip()}),
 
-        # ── Open website (explicit) ──────────────────────────
-        (r"(?:go to|visit|open website|open site)\s+(.+)",
-         "open_website",
-         lambda m: {"url": m.group(1).strip()}),
 
         # ── Search Google ────────────────────────────────────
         (r"(?:search|google|look up|find)\s+(?:for\s+)?(.+?)(?:\s+on\s+google)?$",

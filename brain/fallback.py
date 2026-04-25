@@ -35,6 +35,14 @@ _PATTERNS = [
     # Hello / Hi
     (r"(?:hello|hi|hey|namaste|namaskar)",
      lambda m: {"speak": "Hello boss! Kya haal hai? Kuch kaam hai?"}),
+     
+    # What is AI / General Knowledge prompt
+    (r"(?:what is|who is|tell me about)\s+(.*)",
+     lambda m: {"speak": f"Boss, agar main online hoti toh '{m.group(1)}' ke baare mein detail mein batati. Abhi meri internet se connection nahi ho paa rahi hai, par main aapke liye yeh Google par search kar sakti hoon. Bolenge toh search kar doongi!"}),
+
+    # Joke
+    (r"(?:tell me a joke|joke suna|joke sunao)",
+     lambda m: {"speak": "Ek baar ek programmer se kisi ne poocha: 'Tumhare dost kahan hain?' Usne bola: 'Internet disconnect ho gaya, abhi koi dost nahi hai!' Haha!"}),
 
     # Open app (fallback if intent_router missed it)
     (r"(?:open|launch|start)\s+(.+)",
@@ -65,7 +73,7 @@ def fallback_response(command: str) -> dict:
             return result
 
     log.info(f"Fallback: no pattern match for '{command}'")
-    return {"speak": "Sorry boss, samajh nahi aaya. Thoda aur clearly bolo na?"}
+    return {"speak": "Boss, main theek se samajh nahi paayi. Kya aap thoda alag tarike se bolenge?"}
 
 
 def _get_time() -> str:

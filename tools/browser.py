@@ -53,12 +53,15 @@ def open_website(url: str) -> str:
             full_url = url_lower
 
     try:
-        webbrowser.open(full_url)
-        log.info(f"Opened: {full_url}")
-        return f"Opening {url}!"
+        success = webbrowser.open(full_url)
+        if success:
+            log.info(f"Opened: {full_url}")
+            return f"Opening {url}!"
+        else:
+            return f"FAILED: Browser could not open {url}."
     except Exception as e:
         log.error(f"Failed to open {url}: {e}")
-        return f"Sorry boss, {url} nahi khul paaya: {e}"
+        return f"FAILED: Sorry boss, {url} nahi khul paaya: {e}"
 
 
 def search_google(query: str) -> str:
@@ -72,12 +75,15 @@ def search_google(query: str) -> str:
     search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
 
     try:
-        webbrowser.open(search_url)
-        log.info(f"Opened Google search: {query}")
-        return f"Searching Google for '{query}'!"
+        success = webbrowser.open(search_url)
+        if success:
+            log.info(f"Opened Google search: {query}")
+            return f"Searching Google for '{query}'!"
+        else:
+            return f"FAILED: Browser could not open Google search."
     except Exception as e:
         log.error(f"Google search failed: {e}")
-        return f"Search failed: {e}"
+        return f"FAILED: Search failed: {e}"
 
 
 def search_youtube(query: str) -> str:
@@ -91,9 +97,12 @@ def search_youtube(query: str) -> str:
     search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
 
     try:
-        webbrowser.open(search_url)
-        log.info(f"Opened YouTube search: {query}")
-        return f"Searching YouTube for '{query}'!"
+        success = webbrowser.open(search_url)
+        if success:
+            log.info(f"Opened YouTube search: {query}")
+            return f"Searching YouTube for '{query}'!"
+        else:
+            return f"FAILED: Browser could not open YouTube search."
     except Exception as e:
         log.error(f"YouTube search failed: {e}")
-        return f"YouTube search failed: {e}"
+        return f"FAILED: YouTube search failed: {e}"

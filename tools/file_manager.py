@@ -20,7 +20,7 @@ def create_file(path: str, content: str = "") -> str:
         return f"File created: {path}"
     except Exception as e:
         log.error(f"Create file failed: {e}")
-        return f"Error: {e}"
+        return f"FAILED: Error: {e}"
 
 
 def read_file(path: str) -> str:
@@ -31,10 +31,10 @@ def read_file(path: str) -> str:
             content = f.read()
         return content[:500]  # Limit to 500 chars for spoken output
     except FileNotFoundError:
-        return f"File not found: {path}"
+        return f"FAILED: File not found: {path}"
     except Exception as e:
         log.error(f"Read file failed: {e}")
-        return f"Error: {e}"
+        return f"FAILED: Error: {e}"
 
 
 def delete_file(path: str) -> str:
@@ -46,11 +46,11 @@ def delete_file(path: str) -> str:
         elif os.path.isdir(path):
             shutil.rmtree(path)
         else:
-            return f"Not found: {path}"
+            return f"FAILED: Not found: {path}"
         return f"Deleted: {path}"
     except Exception as e:
         log.error(f"Delete failed: {e}")
-        return f"Error: {e}"
+        return f"FAILED: Error: {e}"
 
 
 def list_files(path: str = ".") -> str:
@@ -63,4 +63,4 @@ def list_files(path: str = ".") -> str:
         return "Files: " + ", ".join(items[:20])  # Limit for speech
     except Exception as e:
         log.error(f"List failed: {e}")
-        return f"Error: {e}"
+        return f"FAILED: Error: {e}"
