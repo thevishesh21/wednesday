@@ -18,6 +18,9 @@ _STATE_SPEEDS = {
     "listening": {"pulse": 1800, "rotation": 6000,  "glow": 2200},
     "thinking":  {"pulse": 1200, "rotation": 2500,  "glow": 1600},
     "speaking":  {"pulse": 900,  "rotation": 4500,  "glow": 1100},
+    "executing": {"pulse": 800,  "rotation": 2000,  "glow": 1000},
+    "error":     {"pulse": 400,  "rotation": 8000,  "glow": 500},
+    "complete":  {"pulse": 2000, "rotation": 5000,  "glow": 3000},
 }
 
 

@@ -48,6 +48,9 @@ STATE_QCOLORS = {
     "listening": QColor(0, 212, 255),
     "thinking":  QColor(138, 43, 226),
     "speaking":  QColor(0, 255, 136),
+    "executing": QColor(255, 191, 0),
+    "error":     QColor(255, 107, 107),
+    "complete":  QColor(0, 255, 255),
 }
 
 STATE_HEX = {
@@ -55,6 +58,9 @@ STATE_HEX = {
     "listening": "#00d4ff",
     "thinking":  "#8a2be2",
     "speaking":  "#00ff88",
+    "executing": "#ffbf00",
+    "error":     "#ff6b6b",
+    "complete":  "#00ffff",
 }
 
 STATUS_TEXT = {
@@ -62,6 +68,9 @@ STATUS_TEXT = {
     "listening": "Listening…",
     "thinking":  "Thinking…",
     "speaking":  "Speaking…",
+    "executing": "Executing…",
+    "error":     "Error!",
+    "complete":  "Complete",
 }
 
 

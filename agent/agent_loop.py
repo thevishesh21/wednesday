@@ -15,6 +15,8 @@ from agent.task_planner import generate_plan
 from agent.step_executor import StepExecutor
 from agent.task_history import task_history
 from brain.context_manager import ContextManager
+from memory.memory_retriever import memory_retriever
+from memory.long_term import long_term
 import config
 
 log = get_logger("agent.agent_loop")
@@ -66,7 +68,12 @@ class AgentLoop(IAgentLoop):
         
         try:
             # 1. UNDERSTAND
-            intent = await parse(raw_input, [m.content for m in self.context.get_messages()[-4:]])
+            # Fetch relevant semantic memory first
+            memories = await memory_retriever.retrieve(raw_input)
+            mem_text = "\n".join([m.content for m in memories]) if memories else "None"
+            log.info(f"Retrieved {len(memories)} memories for context.")
+            
+            intent = await parse(raw_input, [m.content for m in self.context.get_messages()[-4:]] + [f"Memory Context: {mem_text}"])
             intent_label = intent.intent
             
             # Update context
@@ -106,6 +113,9 @@ class AgentLoop(IAgentLoop):
             summary = str(last_result.result) if last_result else "Completed"
             await event_bus.publish("agent.task_complete", {"task_id": task_id, "success": True, "summary": summary})
             task_history.log_task(task_id, raw_input, intent_label, plan_json_for_log, True)
+            
+            # Store in long-term memory
+            await long_term.store(f"Task '{raw_input}' completed. Result: {summary}", {"task_id": task_id, "intent": intent_label})
             
             # Add to context
             self.context.add_message("assistant", f"Executed {len(plan.steps)} steps successfully. Final result: {summary}")

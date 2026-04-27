@@ -15,6 +15,10 @@ keyboard                 # Global hotkeys (system/hotkey_listener.py)
 pywin32                  # Windows API wrappers (system/windows_api.py)
 pyperclip                # Clipboard manager (skills/productivity/clipboard_manager.py)
 
+# ── Phase 7: Memory ──────────────────────────────────────────────
+chromadb                 # Long-term vector database (memory/long_term.py)
+sentence-transformers    # Local embeddings (memory/embedder.py)
+
 # Phase 1: Voice
 pyttsx3
 SpeechRecognition

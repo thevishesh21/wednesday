@@ -31,6 +31,10 @@ from gui.waveform import WaveformWidget
 from gui.floating import FloatingOrb
 from gui.camera_view import CameraPreview
 
+from ui.state_bridge import UIStateBridge
+from ui.panels.system_panel import SystemPanel
+from ui.panels.widget_bar import WidgetBar
+
 
 # ═════════════════════════════════════════════════════════════════
 #  Backend Worker — runs process_command with human-like delay
@@ -176,6 +180,7 @@ class WednesdayGUI(QMainWindow):
         self._processing = False
 
         self._bridge = AssistantBridge.instance()
+        self._state_bridge = UIStateBridge.instance()
 
         self._build_ui()
         self._build_floating_orb()
@@ -196,8 +201,12 @@ class WednesdayGUI(QMainWindow):
         root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
+        
+        # ── Far Left: System Panel ──
+        self._system_panel = SystemPanel()
+        root.addWidget(self._system_panel)
 
-        # ── Left: main content ──
+        # ── Center: main content ──
         main_col = QVBoxLayout()
         main_col.setContentsMargins(20, 16, 10, 0)
         main_col.setSpacing(0)
@@ -238,6 +247,12 @@ class WednesdayGUI(QMainWindow):
         # Input bar
         self._input = InputBar()
         main_col.addWidget(self._input)
+        
+        main_col.addSpacing(10)
+        
+        # Widget bar (bottom)
+        self._widget_bar = WidgetBar()
+        main_col.addWidget(self._widget_bar)
 
         root.addLayout(main_col, stretch=1)
 
@@ -291,6 +306,10 @@ class WednesdayGUI(QMainWindow):
         # Bridge → chat panel  (speak() interception)
         self._bridge.assistant_spoke.connect(self._on_assistant_spoke)
         self._bridge.state_changed.connect(self._on_state_changed)
+        
+        # New State Bridge -> GUI
+        self._state_bridge.state_changed.connect(self._on_state_changed)
+        self._state_bridge.message_received.connect(self._on_bridge_message)
 
         # Voice listener → command + state + energy
         self._listener.command_ready.connect(self._on_voice_command)
@@ -364,14 +383,23 @@ class WednesdayGUI(QMainWindow):
         """Backend finished processing a command."""
         self._processing = False
         self._input.set_enabled(True)
-        if self._listener._active:
-            self._on_state_changed("listening")
-        else:
+        # We don't automatically set idle here anymore, let the new state bridge handle it
+        # or fallback to old behavior if no event bus event was fired
+        QTimer.singleShot(1500, self._check_idle)
+            
+    def _check_idle(self):
+        if self._current_state in ("executing", "complete", "error"):
             self._on_state_changed("idle")
 
     @pyqtSlot(str)
     def _on_error(self, msg: str):
         self._chat.add_message("assistant", f"⚠️ Error: {msg}")
+        self._on_state_changed("error")
+        QTimer.singleShot(2000, self._check_idle)
+
+    @pyqtSlot(str, str)
+    def _on_bridge_message(self, role: str, text: str):
+        self._chat.add_message(role, text)
 
     @pyqtSlot(str)
     def _on_assistant_spoke(self, text: str):
