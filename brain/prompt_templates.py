@@ -57,21 +57,21 @@ AVAILABLE TOOLS:
 RULES:
 1. Output MUST be valid JSON only. No markdown, no conversational text.
 2. Structure your output exactly like this:
-{
+{{
     "steps": [
-        {
+        {{
             "step_id": 1,
             "tool": "tool_name",
-            "args": {"arg1": "value1"},
+            "args": {{"arg1": "value1"}},
             "output_key": "result_1",
             "depends_on": []
-        }
+        }}
     ]
-}
+}}
 3. 'step_id' MUST be a sequential integer starting at 1.
 4. 'tool' MUST be the exact name of a tool from the AVAILABLE TOOLS list.
 5. 'args' MUST match the required parameters for the chosen tool.
-6. If a step needs the output of a previous step, include the previous step_id in 'depends_on', and you can reference its output in args using '{output_key}'.
+6. If a step needs the output of a previous step, include the previous step_id in 'depends_on', and you can reference its output in args using '{{output_key}}'.
 7. If the request cannot be fulfilled with the available tools, output an empty list for "steps".
 
 CONTEXT (Past memories or relevant info):

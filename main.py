@@ -32,7 +32,7 @@ from reminders.reminder import (parse_reminder_command, list_reminders,
 from gesture.gesture_mapper import gesture_loop
 from utils.thread_manager import thread_manager
 from state import state
-import config
+from core.config_loader import cfg as config
 
 log = get_logger("main")
 
@@ -153,7 +153,10 @@ def process_command(command: str) -> None:
         asyncio.run(agent_loop.handle(command))
         return
     except Exception as e:
-        log.warning(f"Agent loop failed: {e}. Falling back to legacy routing.")
+        log.error(f"Agent loop error: {e}")
+        # Speak the error so you hear it during testing
+        speak(f"Sorry boss, kuch error aaya: {str(e)[:80]}")
+        return  
 
     # ── 2. Intent router shortcuts ───────────────────────────
     steps = intent_route(command)
