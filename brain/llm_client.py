@@ -34,10 +34,10 @@ log = get_logger("brain.llm_client")
 
 # ── Free-tier OpenRouter models (tried in order on 402/429) ──────
 OPENROUTER_FREE_MODELS: List[str] = [
-    "openchat/openchat-3.5-1210:free",
-    "mistralai/mistral-7b-instruct:free",
-    "google/gemma-2-9b-it:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
+    "openchat/openchat-3.5-1210",
+    "mistralai/mistral-7b-instruct",
+    "google/gemma-2-9b-it",
+    "meta-llama/llama-3.1-8b-instruct",
 ]
 
 # ── Default timeout settings ──────────────────────────────────────
