@@ -13,6 +13,7 @@ psutil                   # Process management (skills/system/process_manager.py)
 pystray                  # System tray icon (system/tray_icon.py)
 keyboard                 # Global hotkeys (system/hotkey_listener.py)
 pywin32                  # Windows API wrappers (system/windows_api.py)
+pyperclip                # Clipboard manager (skills/productivity/clipboard_manager.py)
 
 # Phase 1: Voice
 pyttsx3
