@@ -144,6 +144,17 @@ def process_command(command: str) -> None:
         state.update(command, tool="builtin", result=handled)
         return
 
+    # ── 1.5 AI Agent Loop (Phase 4) ──────────────────────────
+    try:
+        from agent.agent_loop import agent_loop
+        import asyncio
+        # Run the async handle method synchronously for now
+        # until the whole system becomes async in later phases
+        asyncio.run(agent_loop.handle(command))
+        return
+    except Exception as e:
+        log.warning(f"Agent loop failed: {e}. Falling back to legacy routing.")
+
     # ── 2. Intent router shortcuts ───────────────────────────
     steps = intent_route(command)
     if steps:
