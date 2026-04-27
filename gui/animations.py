@@ -38,6 +38,11 @@ class OrbAnimator(QObject):
         self._orb = orb_widget
         self._group = QParallelAnimationGroup(self)
         self._anims: dict[str, QPropertyAnimation] = {}
+        
+        # New transition manager for smooth color fades
+        from ui.animations.transition_fx import OrbTransitionManager
+        self._transitions = OrbTransitionManager(orb_widget)
+        
         self._build()
 
     # ── build initial animations ─────────────────────────────────
@@ -91,7 +96,9 @@ class OrbAnimator(QObject):
         Transition to a new orb state.
         Updates the OrbWidget color and reconfigures animation speeds.
         """
-        self._orb.set_state_color(state)
+        # Smoothly transition color via the manager
+        self._transitions.transition_to(state)
+        
         speeds = _STATE_SPEEDS.get(state, _STATE_SPEEDS["idle"])
 
         # Stop, reconfigure, restart

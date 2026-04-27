@@ -1,88 +1,105 @@
 """
 WEDNESDAY AI OS — Hinglish Normalizer
-Translates Hinglish (Hindi in English script) to English commands.
-Uses a fast rule-based path first, then LLM if needed.
+Advanced rule-based + LLM fallback normalization for Hinglish commands.
 """
 
 import re
-from typing import Tuple
-
+from typing import Tuple, Dict, List, Optional
 from core.logger import get_logger
+from core.exceptions import WednesdayError
 from brain.llm_client import get_llm_client
-from brain.prompt_templates import HINGLISH_NORMALIZER_PROMPT
-from core.interfaces import LLMMessage
 
 log = get_logger("voice.hinglish_normalizer")
 
-# Simple rule-based transliterations for common commands
-_RULES = {
-    r"\b(khol de|khol do|kholo)\b": "open",
-    r"\b(band kar|band karo|band kar de)\b": "close",
-    r"\b(chala|chalao|chala de)\b": "play",
-    r"\b(bata|batao|bata de)\b": "tell me",
-    r"\b(le|lelo|le lo)\b": "take",
-    r"\b(badha|badhao)\b": "increase",
-    r"\b(ghata|ghataao)\b": "decrease",
-    r"\b(on kar|on karo)\b": "turn on",
-    r"\b(off kar|off karo)\b": "turn off",
-    r"\b(dhundh|dhundo|dhoondho)\b": "search",
-    r"\b(bhai|yaar|please)\b": "", # Filler words
-    r"\b(kya|kaisa|kaun)\b": "what",
-    r"\b(hai)\b": "is",
-}
+class NormalizationError(WednesdayError):
+    """Exception raised when normalization fails."""
+    pass
 
-async def normalize(text: str) -> Tuple[str, bool]:
+class HinglishNormalizer:
     """
-    Normalize Hinglish input to clean English intent.
-    
-    Returns:
-        (normalized_text, was_hinglish)
+    Handles conversion of Hinglish (Hindi-English mix) commands into English intents.
+    Uses a high-performance rule-based engine first, then falls back to LLM for ambiguity.
     """
-    original_text = text.lower().strip()
-    
-    # ── 1. Fast Path (Regex) ──────────────────────────────────────
-    normalized = original_text
-    was_hinglish = False
-    
-    for pattern, replacement in _RULES.items():
-        if re.search(pattern, normalized):
-            was_hinglish = True
-            normalized = re.sub(pattern, replacement, normalized)
-            
-    # Clean up extra spaces
-    normalized = re.sub(r"\s+", " ", normalized).strip()
-    
-    # If the text changed significantly, return the fast path result
-    # (Checking if it changed isn't a perfect heuristic for "is this Hinglish",
-    # but it's a good start for common commands)
-    if was_hinglish and len(normalized) > 0:
-        log.debug(f"Hinglish fast path: '{original_text}' -> '{normalized}'")
-        return normalized, True
 
-    # ── 2. LLM Path ───────────────────────────────────────────────
-    # If it wasn't matched by our rules, but we suspect it might be Hinglish
-    # (e.g., based on some heuristic, though for now we might just ask the LLM
-    # if it's complex enough). For Phase 3, we'll just return the original text 
-    # if it's simple, or let the intent parser handle it.
-    
-    # In a full implementation, we might call the LLM here to translate
-    # complex Hinglish that our regex missed.
-    # For now, to save latency, we only use the LLM path if specifically asked.
-    
-    # Let's add a basic heuristic: if it contains common Hindi words not in our rules
-    hindi_keywords = ["mera", "tumhara", "kaise", "kahan", "kab", "kyun"]
-    if any(k in original_text for k in hindi_keywords):
+    # Static map of common Hinglish patterns to English intents
+    # Patterns use regex for flexibility
+    RULES: Dict[str, str] = {
+        r".*settings\s+(khol|open).*": "open settings",
+        r".*music\s+(chala|play).*": "play my music",
+        r".*bluetooth\s+(on|chalu).*": "turn on bluetooth",
+        r".*files\s+(organize|samajh).*downloads.*": "organize files in Downloads folder",
+        r".*weather\s+(bata|dikhao).*": "tell me today's weather",
+        r".*(band|close)\s+kar.*": "close this",
+        r".*screenshot\s+(le|khich).*": "take a screenshot",
+        r".*volume\s+(badha|increase).*": "increase volume",
+        r".*thoda\s+rest.*": "set do not disturb mode",
+        r".*message\s+(aaya|check).*": "check my messages",
+        r".*(khol|open)\s+de.*": "open", # Generic opener
+    }
+
+    def __init__(self):
+        """Initialize the normalizer with rules and LLM fallback capabilities."""
+        self._llm = None
+        log.info("Hinglish Normalizer initialized with rules.")
+
+    async def _get_llm(self):
+        """Lazy load the LLM client."""
+        if self._llm is None:
+            self._llm = await get_llm_client()
+        return self._llm
+
+    async def normalize(self, text: str) -> Tuple[str, bool]:
+        """
+        Normalize the input text.
+
+        Args:
+            text: The raw input string from STT.
+
+        Returns:
+            A tuple of (normalized_text, was_hinglish_detected).
+
+        Raises:
+            NormalizationError: If the process fails critically.
+        """
+        raw_text = text.lower().strip()
+        
+        # 1. Check for Hinglish detection (simple heuristic)
+        hinglish_markers = ["kar", "de", "khol", "bata", "yaar", "mera", "hoon", "chala"]
+        was_hinglish = any(word in raw_text for word in hinglish_markers)
+
+        # 2. Rule-based Fast Path
+        for pattern, replacement in self.RULES.items():
+            if re.match(pattern, raw_text):
+                log.info(f"Rule match: '{raw_text}' -> '{replacement}'")
+                return replacement, True
+
+        # 3. LLM Fallback (only if Hinglish markers found and no rule matched)
+        if was_hinglish:
+            log.info(f"No rule match for Hinglish input: '{raw_text}'. Falling back to LLM.")
+            llm_result = await self._llm_normalize(raw_text)
+            return llm_result, True
+
+        # 4. Pure English Pass-through
+        return text, False
+
+    async def _llm_normalize(self, text: str) -> str:
+        """Use LLM to normalize complex or ambiguous Hinglish."""
+        from core.interfaces import LLMMessage
+        
+        messages = [
+            LLMMessage(role="system", content="Normalize Hinglish to English. Output only the English translation."),
+            LLMMessage(role="user", content=f"Normalize: '{text}'")
+        ]
+        
         try:
-            llm = await get_llm_client()
-            messages = [
-                LLMMessage(role="system", content=HINGLISH_NORMALIZER_PROMPT),
-                LLMMessage(role="user", content=original_text)
-            ]
+            llm = await self._get_llm()
             response = await llm.chat(messages)
-            translated = response.text.strip()
-            log.debug(f"Hinglish LLM path: '{original_text}' -> '{translated}'")
-            return translated, True
+            normalized = response.text.strip().lower().replace('"', '')
+            log.info(f"LLM normalized: '{text}' -> '{normalized}'")
+            return normalized
         except Exception as e:
-            log.warning(f"Hinglish normalizer LLM fallback failed: {e}")
-            
-    return original_text, False
+            log.error(f"LLM normalization failed: {e}")
+            return text
+
+# Global Singleton
+hinglish_normalizer = HinglishNormalizer()

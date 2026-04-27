@@ -78,6 +78,11 @@ class OrbWidget(QWidget):
         self._state_color = STATE_QCOLORS.get(state, STATE_QCOLORS["idle"])
         self.update()
 
+    def set_custom_color(self, color: QColor):
+        """Used by the transition manager to apply intermediate colors."""
+        self._state_color = color
+        self.update()
+
     # ── painting ─────────────────────────────────────────────────
 
     def paintEvent(self, event):  # noqa: N802

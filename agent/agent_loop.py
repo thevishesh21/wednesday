@@ -17,6 +17,7 @@ from agent.task_history import task_history
 from brain.context_manager import ContextManager
 from memory.memory_retriever import memory_retriever
 from memory.long_term import long_term
+from voice.hinglish_normalizer import hinglish_normalizer
 import config
 
 log = get_logger("agent.agent_loop")
@@ -68,12 +69,17 @@ class AgentLoop(IAgentLoop):
         
         try:
             # 1. UNDERSTAND
-            # Fetch relevant semantic memory first
-            memories = await memory_retriever.retrieve(raw_input)
+            # 1a. Hinglish Normalization
+            normalized_input, was_hinglish = await hinglish_normalizer.normalize(raw_input)
+            if was_hinglish:
+                log.info(f"Hinglish detected. Normalized: '{raw_input}' -> '{normalized_input}'")
+            
+            # 1b. Fetch relevant semantic memory
+            memories = await memory_retriever.retrieve(normalized_input)
             mem_text = "\n".join([m.content for m in memories]) if memories else "None"
             log.info(f"Retrieved {len(memories)} memories for context.")
             
-            intent = await parse(raw_input, [m.content for m in self.context.get_messages()[-4:]] + [f"Memory Context: {mem_text}"])
+            intent = await parse(normalized_input, [m.content for m in self.context.get_messages()[-4:]] + [f"Memory Context: {mem_text}"])
             intent_label = intent.intent
             
             # Update context
