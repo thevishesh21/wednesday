@@ -1,11 +1,17 @@
 # Wednesday AI Assistant - Git Ignore List
 
-# 1. Python cache
+# 1. Python cache and build
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyo
 *.pyd
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # 2. Virtual environment
 venv/
@@ -16,13 +22,26 @@ ENV/
 env.bak/
 venv.bak/
 
+# 2.1 Secrets and environment variables
+.env
+.env.local
+.env.*.local
+*.env
+auth.json
+secrets.json
+
 # 3. Logs
 logs/
 *.log
 
-# 4. Memory / Data files
-# Ignore JSON data like memory and reminders
-*.json
+# 4. Memory / Data / Database files
+memory/chroma_db/
+memory/memory.json
+memory/*.db
+reminders/reminders.json
+db.sqlite3
+*.db
+*.sqlite
 
 # 5. OS files
 .DS_Store
