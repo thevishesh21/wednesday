@@ -34,17 +34,23 @@ class CameraWorker(QObject):
     def run(self):
         try:
             from gesture.hand_tracker import HandTracker
+            from vision.camera_capture import camera_capture
+            
             self._tracker = HandTracker(max_hands=1)
-
-            if not self._tracker.start_camera():
+            
+            if not camera_capture.start():
                 self.error.emit("Camera not available")
                 return
 
             while self._running:
-                frame, results = self._tracker.get_frame()
-                if frame is None:
+                raw_frame = camera_capture.get_frame()
+                if raw_frame is None:
                     QThread.msleep(30)
                     continue
+                
+                # Copy frame to avoid modifying the shared one
+                frame = raw_frame.copy()
+                frame, results = self._tracker.process_frame(frame)
 
                 # Draw hand landmarks on frame
                 self._tracker.draw_landmarks(frame, results)
@@ -63,8 +69,10 @@ class CameraWorker(QObject):
         except Exception as e:
             self.error.emit(str(e))
         finally:
+            from vision.camera_capture import camera_capture
+            camera_capture.stop()
             if self._tracker:
-                self._tracker.cleanup()
+                self._tracker.hands.close() # Close mediapipe, don't stop camera here
 
     def stop(self):
         self._running = False

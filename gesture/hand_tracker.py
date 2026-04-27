@@ -68,7 +68,14 @@ class HandTracker:
         if not ret:
             return None, None
 
-        # Flip horizontally for mirror effect
+        return self.process_frame(frame)
+
+    def process_frame(self, frame):
+        """Detect hands in a provided frame."""
+        if frame is None:
+            return None, None
+            
+        # Flip horizontally for mirror effect (optional, but keep for consistency)
         frame = cv2.flip(frame, 1)
 
         # Convert BGR → RGB for MediaPipe
