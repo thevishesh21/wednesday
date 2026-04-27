@@ -1,4 +1,13 @@
-# Wednesday AI Assistant — Dependencies
+# ── Phase 1: Core Infrastructure ─────────────────────────────────
+pydantic                 # Config validation (core/config_loader.py)
+aiohttp                  # Async LLM networking (brain/llm_client.py)
+
+# ── Phase 3: Voice Pipeline ──────────────────────────────────────
+faster-whisper           # Local STT (voice/stt_engine.py)
+sounddevice              # Audio capture (voice/audio_utils.py)
+webrtcvad                # Voice Activity Detection (voice/audio_utils.py)
+pvporcupine              # Wake word (voice/wake_word.py)
+
 # Phase 1: Voice
 pyttsx3
 SpeechRecognition

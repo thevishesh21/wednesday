@@ -1,9 +1,14 @@
 """
-Wednesday AI Assistant — Wake Word Detector
-Checks if the user's speech contains the wake word.
+Wednesday AI Assistant — Wake Word
+Detects the wake word to activate the assistant.
+Supports both always-on Porcupine streaming (offline) and legacy string matching.
 """
 
+import threading
+import time
+from typing import Optional
 from utils.logger import get_logger
+from core.event_bus import publish_sync
 import config
 
 log = get_logger("wake_word")
