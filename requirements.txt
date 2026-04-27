@@ -8,6 +8,12 @@ sounddevice              # Audio capture (voice/audio_utils.py)
 webrtcvad-wheels         # Voice Activity Detection (voice/audio_utils.py)
 pvporcupine              # Wake word (voice/wake_word.py)
 
+# ── Phase 5: OS Integration ──────────────────────────────────────
+psutil                   # Process management (skills/system/process_manager.py)
+pystray                  # System tray icon (system/tray_icon.py)
+keyboard                 # Global hotkeys (system/hotkey_listener.py)
+pywin32                  # Windows API wrappers (system/windows_api.py)
+
 # Phase 1: Voice
 pyttsx3
 SpeechRecognition
