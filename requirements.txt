@@ -5,7 +5,7 @@ aiohttp                  # Async LLM networking (brain/llm_client.py)
 # ── Phase 3: Voice Pipeline ──────────────────────────────────────
 faster-whisper           # Local STT (voice/stt_engine.py)
 sounddevice              # Audio capture (voice/audio_utils.py)
-webrtcvad                # Voice Activity Detection (voice/audio_utils.py)
+webrtcvad-wheels         # Voice Activity Detection (voice/audio_utils.py)
 pvporcupine              # Wake word (voice/wake_word.py)
 
 # Phase 1: Voice
