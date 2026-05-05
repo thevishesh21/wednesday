@@ -15,6 +15,7 @@ VOICE_INDEX = 1  # 0 = male, 1 = female (if available)
 LISTEN_TIMEOUT = 5
 PHRASE_TIME_LIMIT = 10
 LISTEN_LANGUAGE = "en-IN"
+MIC_DEVICE_INDEX = 2  # Fixed microphone device index (set to None for system default)
 
 # ─── Greeting Responses (varied + natural) ───────────────────────
 WAKE_RESPONSES = [
