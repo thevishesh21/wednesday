@@ -1,7 +1,0 @@
-{
-    "root": ".",
-    "pythonVersion": "3.11",
-    "extraPaths": ["."],
-    "reportMissingImports": "warning",
-    "reportMissingModuleSource": "none"
-}
