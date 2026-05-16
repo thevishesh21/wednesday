@@ -1,0 +1,66 @@
+# ============================================================
+# Wednesday — Runtime Configuration
+# ============================================================
+
+assistant_name: Wednesday
+user_name: User
+
+# ── LLM — Choose your FREE provider ─────────────────────────
+llm:
+  # Change provider to match which key you added to .env:
+  #   groq    → fastest free option (RECOMMENDED)
+  #   gemini  → Google, 1M tokens/day free
+  #   ollama  → 100% local, no internet
+  #   openai  → paid only
+  #   claude  → paid only
+  provider: groq
+
+  # Groq model options (all free):
+  #   llama-3.3-70b-versatile   ← smartest
+  #   llama-3.1-8b-instant      ← fastest
+  #   mixtral-8x7b-32768        ← good balance
+  groq_model: llama-3.3-70b-versatile
+
+  # Gemini model options (all free):
+  #   gemini-1.5-flash    ← fast
+  #   gemini-1.5-pro      ← smarter
+  gemini_model: gemini-1.5-flash
+
+  # Ollama local model (must run: ollama pull llama3 first):
+  ollama_model: llama3
+  ollama_base_url: http://localhost:11434
+
+  temperature: 0.72
+  max_tokens: 512
+  timeout: 60
+
+# ── Voice ────────────────────────────────────────────────────
+voice:
+  stt_engine: faster-whisper
+  whisper_model: base.en
+  whisper_device: cpu
+  whisper_compute_type: int8
+
+  tts_engine: pyttsx3       # Free local TTS (change to elevenlabs if you have key)
+  tts_rate: 180
+  tts_volume: 1.0
+
+  enable_wake_word: false   # Set true after adding PORCUPINE_ACCESS_KEY
+
+  vad_silence_threshold: 0.015
+  vad_silence_duration: 1.8
+  vad_min_speech_duration: 0.4
+  vad_max_speech_duration: 30.0
+
+# ── Memory ───────────────────────────────────────────────────
+memory:
+  short_term_limit: 20
+
+# ── UI ───────────────────────────────────────────────────────
+ui:
+  enable_tray: true
+  enable_panel: false
+
+# ── Logging ──────────────────────────────────────────────────
+log:
+  level: INFO
