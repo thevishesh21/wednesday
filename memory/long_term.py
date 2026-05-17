@@ -1,13 +1,4 @@
-"""
-memory/long_term.py
--------------------
-Persistent vector memory using ChromaDB.
-STUB — Full implementation in Phase 3.
-"""
-from utils.logger import setup_logger
-logger = setup_logger(__name__)
-
+"""memory/long_term.py — Phase 3 stub"""
 class LongTermMemory:
-    """Phase 3: ChromaDB-backed semantic memory store."""
-    async def store(self, text: str, metadata: dict = None): pass
-    async def retrieve(self, query: str, top_k: int = 5) -> list: return []
+    async def store(self, text, metadata=None): pass
+    async def retrieve(self, query, top_k=5): return []

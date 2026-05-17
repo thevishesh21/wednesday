@@ -1,14 +1,13 @@
 """
-Wednesday — AI Desktop Assistant
-=================================
-Entry point.
+Wednesday — Phase 2
+====================
+Voice assistant with desktop + browser control.
 
 Run:
-    python main.py              # Auto-detect voice or text mode
-    python main.py --text       # Force text mode (no mic needed)
-    python main.py --debug      # Verbose logging
-    python main.py --devices    # List audio devices
-    python main.py --calibrate  # Mic calibration tool
+    python main.py           # Auto voice/text
+    python main.py --text    # Text only (no mic)
+    python main.py --debug   # Verbose logs
+    python main.py --devices # List audio devices
 """
 
 import asyncio
@@ -22,127 +21,93 @@ if str(ROOT) not in sys.path:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Wednesday AI Assistant")
-    parser.add_argument("--text",      action="store_true", help="Force text-only mode")
-    parser.add_argument("--debug",     action="store_true", help="Enable debug logging")
-    parser.add_argument("--calibrate", action="store_true", help="Run mic calibration")
-    parser.add_argument("--devices",   action="store_true", help="List audio devices")
-    parser.add_argument("--no-tray",   action="store_true", help="Disable system tray")
-    return parser.parse_args()
+    p = argparse.ArgumentParser(description="Wednesday AI Assistant — Phase 2")
+    p.add_argument("--text",    action="store_true", help="Text mode (no mic)")
+    p.add_argument("--debug",   action="store_true", help="Debug logging")
+    p.add_argument("--devices", action="store_true", help="List audio devices")
+    p.add_argument("--no-tray", action="store_true", help="Disable system tray")
+    return p.parse_args()
 
 
-def apply_args(args) -> None:
+async def main(args):
+    from utils.logger    import setup_logger
     from config.settings import settings
+
+    logger = setup_logger("main")
+
     if args.debug:
         settings.log.level = "DEBUG"
         import logging
         logging.getLogger().setLevel(logging.DEBUG)
-    if args.no_tray:
-        settings.ui.enable_tray = False
 
-
-async def main(args) -> None:
-    from utils.logger import setup_logger
-    from config.settings import settings
-    from core.orchestrator import Orchestrator
-
-    logger = setup_logger("main")
-
-    # ── Utility flags ───────────────────────────────────────
     if args.devices:
         from utils.audio_utils import list_audio_devices
         list_audio_devices()
         return
 
-    if args.calibrate:
-        from voice.listener import MicListener
-        print("Calibrating microphone — please be quiet for 3 seconds...")
-        listener = MicListener()
-        ambient = listener.get_ambient_noise_level(3.0)
-        print(f"\n  Ambient noise level:      {ambient:.4f} RMS")
-        print(f"  Recommended threshold:    {ambient * 2.5:.4f} RMS")
-        print(f"  Current config threshold: {settings.voice.vad_silence_threshold}")
-        listener.shutdown()
-        return
-
-    # ── Validate at least one LLM is configured ─────────────
+    # Validate API key
     if not settings.has_any_llm():
-        print("\n" + "═" * 62)
-        print("  ⚠️  No AI provider configured!")
+        print("\n" + "="*60)
+        print("  No AI provider configured!")
         print()
-        print("  You need ONE of these free options in your .env file:")
+        print("  FREE OPTIONS — add ONE to your .env file:")
         print()
-        print("  OPTION 1 — Groq (fastest, recommended):")
-        print("    → https://console.groq.com  (free signup)")
-        print("    → Add to .env:  GROQ_API_KEY=gsk_...")
-        print("    → Set in config.yaml:  llm.provider: groq")
+        print("  Groq (fastest, recommended):")
+        print("    GROQ_API_KEY=gsk_...")
+        print("    Get key: https://console.groq.com")
         print()
-        print("  OPTION 2 — Google Gemini (1M tokens/day free):")
-        print("    → https://aistudio.google.com/app/apikey")
-        print("    → Add to .env:  GEMINI_API_KEY=AIza...")
-        print("    → Set in config.yaml:  llm.provider: gemini")
+        print("  Google Gemini:")
+        print("    GEMINI_API_KEY=AIza...")
+        print("    Get key: https://aistudio.google.com/app/apikey")
         print()
-        print("  OPTION 3 — Ollama (100% local, no internet):")
-        print("    → https://ollama.com/download  (install the app)")
-        print("    → Run:  ollama pull llama3")
-        print("    → Set in config.yaml:  llm.provider: ollama")
-        print("═" * 62 + "\n")
+        print("  Ollama (local, no internet):")
+        print("    Install: https://ollama.com/download")
+        print("    Run: ollama pull llama3")
+        print("    Set config.yaml: llm.provider: ollama")
+        print("="*60 + "\n")
         sys.exit(1)
 
-    # ── Log which provider is active ────────────────────────
-    provider = settings.llm.provider
-    logger.info(f"Using LLM provider: {provider}")
+    logger.info(f"Provider: {settings.llm.provider}")
 
-    if provider == "groq":
-        logger.info(f"Groq model: {settings.llm.groq_model}")
-    elif provider == "gemini":
-        logger.info(f"Gemini model: {settings.llm.gemini_model}")
-    elif provider == "ollama":
-        logger.info(f"Ollama model: {settings.llm.ollama_model} @ {settings.llm.ollama_base_url}")
-
-    # ── System tray ─────────────────────────────────────────
+    # System tray
     tray = None
-    if settings.ui.enable_tray:
+    if settings.ui.enable_tray and not args.no_tray:
         import threading
         from ui.tray import TrayApp
         tray = TrayApp()
-        tray_thread = threading.Thread(target=tray.run, name="SystemTray", daemon=True)
-        tray_thread.start()
+        t = threading.Thread(target=tray.run, name="Tray", daemon=True)
+        t.start()
 
-    # ── Main orchestrator ────────────────────────────────────
-    orchestrator = Orchestrator()
+    # Orchestrator
+    from core.orchestrator import Orchestrator
+    orch = Orchestrator()
     if tray:
-        tray.orchestrator = orchestrator
+        tray.orchestrator = orch
 
-    # ── Force text mode if requested ────────────────────────
+    # Force text mode
     if args.text:
         async def _text_only():
-            orchestrator._running = True
-            orchestrator._print_banner()
-            orchestrator._init_speaker()
-            await orchestrator._text_loop()
-        orchestrator.start = _text_only
+            orch._running = True
+            orch._print_banner()
+            orch._init_speaker()
+            orch._init_system_agent()
+            await orch._text_loop()
+        orch.start = _text_only
 
-    # ── Run ─────────────────────────────────────────────────
     try:
-        logger.info("Wednesday starting...")
-        await orchestrator.start()
+        await orch.start()
     except KeyboardInterrupt:
-        print("\n\nShutting down...")
+        print("\nShutting down...")
     except Exception as e:
-        logger.exception(f"Fatal error: {e}")
+        logger.exception(f"Fatal: {e}")
     finally:
-        await orchestrator.stop()
-        logger.info("Wednesday stopped cleanly.")
+        await orch.stop()
 
 
 def run():
     args = parse_args()
-    apply_args(args)
-
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
     asyncio.run(main(args))
 
 

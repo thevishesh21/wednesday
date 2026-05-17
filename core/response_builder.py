@@ -20,26 +20,25 @@ logger = setup_logger(__name__)
 VOICE_MAX_CHARS = 600
 
 # Markdown patterns to remove for clean speech
-# Each entry: (pattern, replacement, flags)
+# Each entry: (pattern, replacement, flags)  — flags is optional (default 0)
 _MARKDOWN_PATTERNS = [
-    (r"\*\*(.+?)\*\*",          r"\1",   0),     # **bold** → bold
-    (r"\*(.+?)\*",              r"\1",   0),     # *italic* → italic
-    (r"__(.+?)__",              r"\1",   0),     # __bold__
-    (r"`(.+?)`",                r"\1",   0),     # `code`
-    (r"```[\s\S]+?```",         r"",     0),     # ```code blocks```
-    (r"#{1,6}\s+",              r"",     0),     # ## headers
-    (r"^\s*[-*+]\s+",           r"",     re.M),  # - bullet points
-    (r"^\s*\d+\.\s+",           r"",     re.M),  # 1. numbered lists
-    (r"\[([^\]]+)\]\([^)]+\)",  r"\1",   0),     # [text](url) → text
+    (r"\*\*(.+?)\*\*",          r"\1",  0),      # **bold** → bold
+    (r"\*(.+?)\*",              r"\1",  0),      # *italic* → italic
+    (r"__(.+?)__",              r"\1",  0),      # __bold__
+    (r"`(.+?)`",                r"\1",  0),      # `code`
+    (r"```[\s\S]+?```",         r"",    0),      # ```code blocks```
+    (r"#{1,6}\s+",              r"",    0),      # ## headers
+    (r"^\s*[-*+]\s+",           r"",    re.M),   # - bullet points
+    (r"^\s*\d+\.\s+",           r"",    re.M),   # 1. numbered lists
+    (r"\[([^\]]+)\]\([^)]+\)",  r"\1",  0),      # [text](url) → text
     (r"\n{3,}",                 r"\n\n", 0),     # Collapse excess newlines
 ]
 
-# Compile all patterns — simple explicit loop, no clever unpacking
 _COMPILED_MD = []
 for _item in _MARKDOWN_PATTERNS:
-    _pattern = _item[0]
-    _replace = _item[1]
-    _flags   = _item[2] if len(_item) > 2 else 0
+    _pattern  = _item[0]
+    _replace  = _item[1]
+    _flags    = _item[2] if len(_item) > 2 else 0
     _COMPILED_MD.append((re.compile(_pattern, _flags), _replace))
 
 
@@ -76,6 +75,7 @@ class ResponseBuilder:
 
         # Truncate for voice if too long
         if len(result) > VOICE_MAX_CHARS:
+            # Try to cut at a sentence boundary
             truncated = result[:VOICE_MAX_CHARS]
             last_period = max(
                 truncated.rfind(". "),
@@ -88,14 +88,14 @@ class ResponseBuilder:
             else:
                 result = truncated.rsplit(" ", 1)[0] + "..."
 
-            logger.debug("Response truncated for voice output.")
+            logger.debug(f"Response truncated for voice output.")
 
         return result
 
-    def extract_action_tags(self, text: str) -> tuple:
+    def extract_action_tags(self, text: str) -> tuple[str, list[dict]]:
         """
         Extract [ACTION:type:param] tags from LLM response.
-        Used in Phase 4+ when LLM decides to call tools.
+        These are used in Phase 4+ when LLM decides to call tools.
 
         Example:
             Input:  "Opening Chrome. [ACTION:open_app:chrome]"
